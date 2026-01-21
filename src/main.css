@@ -2,8 +2,8 @@
   --bg-color: #0a0a0a;
   --text-color: #f0f0f0;
   --accent-color: #3b82f6;
-  --glass-bg: rgba(255, 255, 255, 0.05);
-  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-bg: rgba(10, 10, 10, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.12);
 }
 
 * {
