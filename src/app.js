@@ -1,24 +1,33 @@
 import { RadialContextMenu } from "./radial-context-menu/radial-context-menu.js";
 import { mainMenuItems } from "./main-menu-data.js";
+import { svgMenuItems } from "./second-menu-data.js";
 
 export class App {
     mainMenu;
+    svgMenu;
 
     start() {
-        this.setupContextMenu();
+        this.setupMainVariant();
+        this.setupSvgVariant();
     }
 
-    setupContextMenu() {
+    setupMainVariant() {
         this.mainMenu = new RadialContextMenu();        
         this.mainMenu.itemsSource = mainMenuItems;
-        this.mainMenu.selector = '.content';
-        this.mainMenu.onInit = (menu) => console.log("Menu initialized", menu);
-        this.mainMenu.onOpen = (menu) => console.log("Menu opened", menu);
-        this.mainMenu.onClose = (menu) => console.log("Menu closed", menu);
-        this.mainMenu.onSelectItem = (item) => console.log("Item selected:", item.name);
-        this.mainMenu.onHover = (item) => console.log("Hovering over:", item.name);        
+        this.mainMenu.selector = 'h1'; // Only on header for main variant
+        this.mainMenu.onSelectItem = (item) => console.log("Main Menu Selected:", item.name);
         this.mainMenu.init();
-        console.log("Boot sequence completed. Right-click to see the menu.");
+    }
+
+    setupSvgVariant() {
+        this.svgMenu = new RadialContextMenu();
+        this.svgMenu.itemsSource = svgMenuItems;
+        this.svgMenu.selector = 'p'; // Only on paragraph for SVG variant
+        this.svgMenu.onSelectItem = (item) => console.log("SVG Menu Selected:", item.name);
+        this.svgMenu.onHover = (item) => console.log("SVG Menu Hover:", item.name);
+        this.svgMenu.init();
+        
+        console.log("App started. Right-click 'header' for Emoji menu, and 'paragraph' for SVG menu.");
     }
 }
 

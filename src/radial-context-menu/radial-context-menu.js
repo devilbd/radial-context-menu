@@ -167,7 +167,15 @@ export class RadialContextMenu {
         
         const label = document.createElement('span');
         label.className = 'segment-label';
-        label.textContent = item.image;
+        
+        if (item.image && typeof item.image === 'string' && item.image.endsWith('.svg')) {
+            const img = document.createElement('img');
+            img.src = item.image;
+            img.className = 'segment-icon';
+            label.appendChild(img);
+        } else {
+            label.textContent = item.image;
+        }
         
         const midAngle = startAngle + (angleWidth / 2);
         const labelPos = this.getPoint(midAngle, 39);
