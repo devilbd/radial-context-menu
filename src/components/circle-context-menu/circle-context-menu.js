@@ -1,9 +1,10 @@
 export class CircleContextMenu {
     constructor(options = {}) {
-        this.items = options.itemsSource || [];
+        this.rootItems = options.itemsSource || [];
         this.menu = null;
         this.isOpen = false;
         this.radius = 150; // pixels
+        this.navigationStack = []; // Breadcrumbs for nested menus
         this.init();
     }
 
@@ -11,6 +12,11 @@ export class CircleContextMenu {
         this.createMenu();
         this.createCenterButton();
         this.attachEvents();
+    }
+
+    get currentItems() {
+        if (this.navigationStack.length === 0) return this.rootItems;
+        return this.navigationStack[this.navigationStack.length - 1].items || [];
     }
 
     createMenu() {
@@ -25,14 +31,48 @@ export class CircleContextMenu {
         this.titlePop.className = 'menu-title-pop';
         this.menu.appendChild(this.titlePop);
         
-        const segmentAngle = 360 / this.items.length;
-        
-        this.items.forEach((item, index) => {
-            const segment = this.createSegment(item, index, segmentAngle);
-            this.menu.appendChild(segment);
-        });
+        // Items container to allow swapping segments
+        this.itemsContainer = document.createElement('div');
+        this.itemsContainer.className = 'items-container';
+        this.menu.appendChild(this.itemsContainer);
+
+        this.renderSegments();
 
         document.body.appendChild(this.menu);
+    }
+
+    renderSegments(direction = 'in') {
+        const oldContainer = this.itemsContainer;
+        
+        // Create new container for the next layer
+        const newContainer = document.createElement('div');
+        newContainer.className = `items-container entering`;
+        if (direction === 'out') {
+            newContainer.className = `items-container exiting`;
+        }
+
+        const items = this.currentItems;
+        const segmentAngle = 360 / items.length;
+        
+        items.forEach((item, index) => {
+            const segment = this.createSegment(item, index, segmentAngle);
+            newContainer.appendChild(segment);
+        });
+
+        this.menu.appendChild(newContainer);
+        
+        // Trigger animations
+        requestAnimationFrame(() => {
+            if (oldContainer) {
+                oldContainer.classList.add(direction === 'in' ? 'exiting' : 'entering');
+                oldContainer.classList.remove('active');
+                setTimeout(() => oldContainer.remove(), 400);
+            }
+            
+            newContainer.classList.remove('entering', 'exiting');
+            newContainer.classList.add('active');
+            this.itemsContainer = newContainer;
+        });
     }
 
     createCenterButton() {
@@ -42,20 +82,48 @@ export class CircleContextMenu {
 
         this.centerButton.onclick = (e) => {
             e.stopPropagation();
-            console.log('Center button clicked');
-            this.close();
+            if (this.navigationStack.length > 0) {
+                this.goBack();
+            } else {
+                this.close();
+            }
         };
 
         this.menu.appendChild(this.centerButton);
     }
 
+    updateCenterButton() {
+        const iconSpan = this.centerButton.querySelector('span');
+        if (this.navigationStack.length > 0) {
+            iconSpan.textContent = '←'; // Back arrow
+        } else {
+            iconSpan.textContent = '×'; // Close icon
+        }
+    }
+
+    goBack() {
+        this.navigationStack.pop();
+        this.renderSegments('out');
+        this.updateCenterButton();
+    }
+
+    navigateTo(item) {
+        if (item.items && item.items.length > 0) {
+            this.navigationStack.push(item);
+            this.renderSegments('in');
+            this.updateCenterButton();
+        }
+    }
+
     createSegment(item, index, angleWidth) {
-        const overlap = 0; // Removed overlap to prevent double-blurring artifacts
         const startAngle = index * angleWidth - 90;
         const endAngle = (index + 1) * angleWidth - 90;
         
         const segment = document.createElement('div');
         segment.className = 'menu-segment';
+        if (item.items && item.items.length > 0) {
+            segment.classList.add('has-children');
+        }
         segment.style.zIndex = index + 1;
 
         // Hover events for title pop
@@ -125,11 +193,25 @@ export class CircleContextMenu {
         label.style.top = `${labelPos.y}%`;
         
         segment.appendChild(label);
+
+        // Sub-item indicator
+        if (item.items && item.items.length > 0) {
+            const indicator = document.createElement('div');
+            indicator.className = 'submenu-indicator';
+            const indicatorPos = this.getPoint(midAngle, 45);
+            indicator.style.left = `${indicatorPos.x}%`;
+            indicator.style.top = `${indicatorPos.y}%`;
+            segment.appendChild(indicator);
+        }
         
         segment.onclick = (e) => {
             e.stopPropagation();
-            console.log(`Clicked: ${item.key}`);
-            this.close();
+            if (item.items && item.items.length > 0) {
+                this.navigateTo(item);
+            } else {
+                console.log(`Clicked: ${item.key}`);
+                this.close();
+            }
         };
 
         return segment;
@@ -140,14 +222,6 @@ export class CircleContextMenu {
         return {
             x: 50 + distance * Math.cos(rad),
             y: 50 + distance * Math.sin(rad)
-        };
-    }
-
-    getPointPixels(angle, distance) {
-        const rad = (angle * Math.PI) / 180;
-        return {
-            x: this.radius + distance * Math.cos(rad),
-            y: this.radius + distance * Math.sin(rad)
         };
     }
 
@@ -186,6 +260,10 @@ export class CircleContextMenu {
     }
 
     open(x, y) {
+        this.navigationStack = []; // Reset navigation when opening fresh
+        this.renderSegments();
+        this.updateCenterButton();
+        
         this.menu.style.left = `${x - this.radius}px`;
         this.menu.style.top = `${y - this.radius}px`;
         this.menu.style.display = 'block';
